@@ -98,8 +98,17 @@ NAN_METHOD(convert_blob) {
     if (!parse_and_validate_block_from_blob(input, b))
         return THROW_ERROR_EXCEPTION("Failed to parse block");
 
-    if (!get_block_hashing_blob(b, output))
-        return THROW_ERROR_EXCEPTION("Failed to create mining block");
+    if (b.major_version < BLOCK_MAJOR_VERSION_2) {
+        if (!get_block_hashing_blob(b, output))
+            return THROW_ERROR_EXCEPTION("Failed to create mining block");
+    } else {
+        block parent_block;
+        if (!construct_parent_block(b, parent_block))
+            return THROW_ERROR_EXCEPTION("Failed to construct parent block");
+
+        if (!get_block_hashing_blob(parent_block, output))
+            return THROW_ERROR_EXCEPTION("Failed to create mining block");
+    }
     
     v8::Local<v8::Value> returnValue = Nan::CopyBuffer((char*)output.data(), output.size()).ToLocalChecked();
     info.GetReturnValue().Set(
